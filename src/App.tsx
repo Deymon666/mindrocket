@@ -9,10 +9,11 @@ import CrosswordGame from './components/games/CrosswordGame';
 import BasicColorGame from './components/games/BasicColorGame';
 import AdvancedColorGame from './components/games/AdvancedColorGame';
 import CreativePause from './components/games/CreativePause';
+import WelcomePopup from './components/WelcomePopup';
 import confetti from 'canvas-confetti';
 import { Rocket, Star, Trophy, ArrowLeft, Sparkles } from 'lucide-react';
 
-export type GameState = 'title' | 'name_entry' | 'menu' | 'world_levels' | 'playing' | 'transition' | 'game_over';
+export type GameState = 'title' | 'name_entry' | 'welcome' | 'menu' | 'world_levels' | 'playing' | 'transition' | 'game_over';
 export type MinigameType = 'crossword' | 'basic_color' | 'advanced_color' | 'creative_pause';
 
 interface Minigame {
@@ -57,17 +58,15 @@ export default function App() {
   const [score, setScore] = useState(0);
   const [currentMinigames, setCurrentMinigames] = useState<Minigame[]>([]);
   const [currentGameIndex, setCurrentGameIndex] = useState(0);
+  const [showWelcomePopup, setShowWelcomePopup] = useState(false);
 
   // Generate 5 random minigames for a world
   const generateWorld = (worldLevel: number) => {
     const games: Minigame[] = [];
     const types: MinigameType[] = ['crossword', 'basic_color', 'advanced_color'];
     
-    // Add 1 or 2 creative pauses randomly
-    const numPauses = Math.random() > 0.5 ? 2 : 1;
-    for (let i = 0; i < numPauses; i++) {
-      games.push({ type: 'creative_pause', id: `pause-${Date.now()}-${i}` });
-    }
+    // Add exactly 1 creative pause
+    games.push({ type: 'creative_pause', id: `pause-${Date.now()}` });
 
     // Fill the rest with random games
     while (games.length < 5) {
@@ -200,10 +199,15 @@ export default function App() {
               onComplete={(name, avatar) => {
                 setPlayerName(name);
                 setPlayerAvatar(avatar);
-                setGameState('menu');
+                setShowWelcomePopup(true);
+                setGameState('welcome');
               }}
               onBack={() => setGameState('title')}
             />
+          )}
+
+          {gameState === 'welcome' && (
+            <motion.div key="welcome" className="flex-1" />
           )}
 
           {gameState === 'menu' && (
@@ -217,6 +221,7 @@ export default function App() {
                 currentWorld={world} 
                 playerName={playerName}
                 playerAvatar={playerAvatar}
+                score={score}
                 onBack={() => setGameState('name_entry')}
               />
             </div>
@@ -303,6 +308,18 @@ export default function App() {
             </motion.div>
           )}
         </AnimatePresence>
+
+        <WelcomePopup 
+          isOpen={showWelcomePopup} 
+          playerName={playerName} 
+          onClose={() => {
+            setShowWelcomePopup(false);
+            if (score === 0) {
+              setScore(50);
+            }
+            setGameState('menu');
+          }} 
+        />
       </div>
     </div>
   );

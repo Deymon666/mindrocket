@@ -35,6 +35,7 @@ export default function BasicColorGame({ onComplete, worldLevel, score, onUseHin
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [attempts, setAttempts] = useState(0);
   const [eliminatedOptions, setEliminatedOptions] = useState<string[]>([]);
+  const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     // Select a random target color
@@ -52,6 +53,7 @@ export default function BasicColorGame({ onComplete, worldLevel, score, onUseHin
     setIsCorrect(null);
     setAttempts(0);
     setEliminatedOptions([]);
+    setFeedback(null);
   }, [worldLevel]);
 
   const handleSelect = (color: typeof COLORS[0]) => {
@@ -61,17 +63,24 @@ export default function BasicColorGame({ onComplete, worldLevel, score, onUseHin
     
     if (color.hex === targetColor.hex) {
       setIsCorrect(true);
+      setFeedback({ message: "¡Correcto! Este es el color exacto.", type: 'success' });
       // Calculate points based on attempts (max 50, min 10)
       const points = Math.max(10, 50 - (attempts * 10));
-      setTimeout(() => onComplete(points), 1500);
+      setTimeout(() => onComplete(points), 1800);
     } else {
       setIsCorrect(false);
       setAttempts(prev => prev + 1);
+      
+      // Generate specific feedback
+      let errorMsg = `Ese es ${color.name}. Este color no coincide con el tono exacto solicitado.`;
+      setFeedback({ message: errorMsg, type: 'error' });
+
       // Give them another chance after a brief delay
       setTimeout(() => {
         setSelected(null);
         setIsCorrect(null);
-      }, 1000);
+        setFeedback(null);
+      }, 1500);
     }
   };
 
@@ -115,7 +124,9 @@ export default function BasicColorGame({ onComplete, worldLevel, score, onUseHin
             "{targetColor.name}"
           </span>
         </h3>
-        <p className="text-lg text-white/70 font-medium">Toca la muestra correcta</p>
+        <p className={`text-lg font-medium h-[24px] sm:h-[28px] ${feedback ? (feedback.type === 'success' ? 'text-[#00F5D4] text-sm sm:text-base font-bold' : 'text-[#FF477E] text-sm sm:text-base font-bold') : 'text-white/70'}`}>
+          {feedback ? feedback.message : 'Toca la muestra correcta'}
+        </p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-8 w-full px-4 max-w-[300px]">
@@ -129,7 +140,7 @@ export default function BasicColorGame({ onComplete, worldLevel, score, onUseHin
             onClick={() => !isEliminated && handleSelect(color)}
             disabled={selected !== null || isEliminated}
             className={`aspect-square rounded-[2rem] transition-all relative overflow-hidden group
-              ${selected === color.hex && isCorrect === false ? 'ring-4 ring-red-500 opacity-50 scale-95' : ''}
+              ${selected === color.hex && isCorrect === false ? 'ring-4 ring-red-500 opacity-50 scale-95 animate-shake' : ''}
               ${selected === color.hex && isCorrect === true ? 'ring-8 ring-[#00F5D4] scale-110 z-10 shadow-[0_0_40px_rgba(0,245,212,0.6)]' : ''}
               ${selected !== null && selected !== color.hex && color.hex === targetColor.hex && isCorrect === false ? 'ring-4 ring-[#00F5D4] animate-pulse' : 'border-4 border-white/20 shadow-lg hover:shadow-xl'}
               ${isEliminated ? 'opacity-20 grayscale cursor-not-allowed scale-90' : ''}

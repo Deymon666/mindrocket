@@ -28,10 +28,17 @@ export default function AdvancedColorGame({ onComplete, worldLevel, score, onUse
   const [selectedColors, setSelectedColors] = useState<string[]>([]);
   const [isCorrect, setIsCorrect] = useState<boolean | null>(null);
   const [eliminatedOptions, setEliminatedOptions] = useState<string[]>([]);
+  const [feedback, setFeedback] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     generateChallenge();
   }, [worldLevel]);
+
+  // Helper to extract hue from hsl string (hsl(H, S%, L%))
+  const getHue = (hslString: string) => {
+    const match = hslString.match(/hsl\((\d+),\s*\d+%,\s*\d+%\)/);
+    return match ? parseInt(match[1]) : 0;
+  };
 
   const generateChallenge = () => {
     const types: HarmonyType[] = [
@@ -50,15 +57,15 @@ export default function AdvancedColorGame({ onComplete, worldLevel, score, onUse
 
     switch (type) {
       case 'Complementario':
-        targetColors = [hsl(h + 180, s, l)];
+        targetColors = [hsl((h + 180) % 360, s, l)];
         description = 'Encuentra el color opuesto en el círculo cromático.';
         break;
       case 'Análogo':
-        targetColors = [hsl(h - 30, s, l), hsl(h + 30, s, l)];
+        targetColors = [hsl((h - 30 + 360) % 360, s, l), hsl((h + 30) % 360, s, l)];
         description = 'Selecciona los dos colores adyacentes al color base.';
         break;
       case 'Tríada':
-        targetColors = [hsl(h + 120, s, l), hsl(h + 240, s, l)];
+        targetColors = [hsl((h + 120) % 360, s, l), hsl((h + 240) % 360, s, l)];
         description = 'Encuentra los colores que forman un triángulo equilátero.';
         break;
       case 'Monocromático':
@@ -66,23 +73,40 @@ export default function AdvancedColorGame({ onComplete, worldLevel, score, onUse
         description = 'Selecciona diferentes tonos y matices del mismo color.';
         break;
       case 'Complementario Dividido':
-        targetColors = [hsl(h + 150, s, l), hsl(h + 210, s, l)];
+        targetColors = [hsl((h + 150) % 360, s, l), hsl((h + 210) % 360, s, l)];
         description = 'Selecciona los dos colores adyacentes al complementario.';
         break;
       case 'Regla 60-30-10':
         // 60% base (neutralish), 30% secondary (analogous), 10% accent (complementary)
-        targetColors = [hsl(h + 30, s, l), hsl(h + 180, s, l)];
+        targetColors = [hsl((h + 30) % 360, s, l), hsl((h + 180) % 360, s, l)];
         description = 'Construye una paleta 60-30-10: Elige el color secundario (30%) y el acento (10%).';
         break;
     }
 
     // Generate options: targets + random noise
     let options = [...targetColors];
-    while (options.length < 8) {
+    
+    const isDistinct = (newColor: string, newH: number) => {
+      // Must be visually distinct from baseColor and all current options
+      const colorsToCheck = [baseColor, ...options];
+      for (const color of colorsToCheck) {
+        const h2 = getHue(color);
+        const hueDiff = Math.min(Math.abs(newH - h2), 360 - Math.abs(newH - h2));
+        if (hueDiff < 20 && color.includes(`%`)) { // If hue diff is too small, they are visually similar
+           return false;
+        }
+      }
+      return true;
+    };
+
+    let attempts = 0;
+    while (options.length < 8 && attempts < 100) {
+      attempts++;
       const randomH = Math.floor(Math.random() * 360);
       const randomL = 40 + Math.floor(Math.random() * 20);
       const noiseColor = hsl(randomH, s, randomL);
-      if (!options.includes(noiseColor) && noiseColor !== baseColor) {
+      
+      if (isDistinct(noiseColor, randomH)) {
         options.push(noiseColor);
       }
     }
@@ -94,36 +118,64 @@ export default function AdvancedColorGame({ onComplete, worldLevel, score, onUse
     setSelectedColors([]);
     setIsCorrect(null);
     setEliminatedOptions([]);
+    setFeedback(null);
   };
 
   const handleSelect = (color: string) => {
     if (!challenge || isCorrect) return;
 
     let newSelected = [...selectedColors];
+    
     if (newSelected.includes(color)) {
       newSelected = newSelected.filter(c => c !== color);
+      setSelectedColors(newSelected);
+      setFeedback(null); // Clear feedback when unselecting
+      return;
+    }
+
+    // Checking feedback for the newly selected color
+    const isColorTarget = challenge.targetColors.includes(color);
+    if (!isColorTarget) {
+        let errorMsg = "Este color no coincide con la relación cromática indicada.";
+        const colorH = getHue(color);
+        const baseH = getHue(challenge.baseColor);
+        const diff = Math.min(Math.abs(colorH - baseH), 360 - Math.abs(colorH - baseH));
+        
+        if (challenge.type === 'Complementario' && diff < 150) {
+            errorMsg = "Recuerda que el complementario debe estar en el lado opuesto del círculo.";
+        } else if (challenge.type === 'Análogo' && diff > 60) {
+            errorMsg = "Un color análogo debe estar muy cerca del color base en el círculo.";
+        } else if (challenge.type === 'Monocromático') {
+            errorMsg = "Este color tiene un tono distinto. ¡Busca una variación de luminosidad del mismo color!";
+        }
+
+        setFeedback({ message: errorMsg, type: 'error' });
     } else {
-      if (newSelected.length < challenge.targetColors.length) {
-        newSelected.push(color);
-      } else {
-        newSelected[newSelected.length - 1] = color;
-      }
+        setFeedback({ message: "¡Buen ojo! Ese color pertenece a la relación cromática.", type: 'success' });
+    }
+
+    if (newSelected.length < challenge.targetColors.length) {
+      newSelected.push(color);
+    } else {
+      newSelected[newSelected.length - 1] = color;
     }
 
     setSelectedColors(newSelected);
 
-    // Check if correct
+    // Check if fully correct (all targets selected)
     if (newSelected.length === challenge.targetColors.length) {
       const isMatch = challenge.targetColors.every(t => newSelected.includes(t));
       if (isMatch) {
         setIsCorrect(true);
-        setTimeout(() => onComplete(150), 2000);
+        setFeedback({ message: "¡Correcto! Has completado la relación cromática solicitada.", type: 'success' });
+        setTimeout(() => onComplete(150), 3000);
       } else {
         setIsCorrect(false);
         setTimeout(() => {
           setSelectedColors([]);
           setIsCorrect(null);
-        }, 1500);
+          setFeedback(null);
+        }, 3000);
       }
     }
   };
@@ -168,9 +220,11 @@ export default function AdvancedColorGame({ onComplete, worldLevel, score, onUse
       </div>
 
       <div className="text-center mb-6 w-full max-w-[320px]">
-        <p className="text-white mb-4 font-bold text-sm bg-white/10 backdrop-blur-md p-4 rounded-[1.5rem] shadow-lg border border-white/20 leading-relaxed relative overflow-hidden">
+        <p className="relative text-white mb-4 font-bold text-sm bg-white/10 backdrop-blur-md p-4 rounded-[1.5rem] shadow-lg border border-white/20 leading-relaxed overflow-hidden">
           <span className="absolute top-0 left-0 w-2 h-full bg-gradient-to-b from-[#FEE440] to-[#F58700]"></span>
-          {challenge.description}
+          <span className={feedback ? (feedback.type === 'success' ? 'text-[#00F5D4]' : 'text-[#FF477E]') : ''}>
+            {feedback ? feedback.message : challenge.description}
+          </span>
         </p>
         
         <div className="flex items-center justify-center gap-3 bg-white/10 backdrop-blur-md p-4 rounded-[2rem] shadow-lg border border-white/20">

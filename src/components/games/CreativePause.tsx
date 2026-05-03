@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { BookOpen, Coffee, CheckCircle2, Sparkles, Brain } from 'lucide-react';
+import { BookOpen, Coffee, CheckCircle2, Sparkles, Brain, Loader2 } from 'lucide-react';
+import { generateDesignSuggestion } from '../../services/aiService';
 
 interface CreativePauseProps {
   onComplete: (points: number) => void;
@@ -15,6 +16,16 @@ export default function CreativePause({ onComplete, worldLevel }: CreativePauseP
   const [timeLeft, setTimeLeft] = useState(30 * 60); // 30 minutes in seconds
   const [summary, setSummary] = useState('');
   const [isComplete, setIsComplete] = useState(false);
+  const [aiSuggestion, setAiSuggestion] = useState('');
+  const [isGeneratingSuggestion, setIsGeneratingSuggestion] = useState(false);
+  const hasCompletedRef = useRef(false);
+
+  const finishGame = (points: number) => {
+    if (!hasCompletedRef.current) {
+      hasCompletedRef.current = true;
+      onComplete(points);
+    }
+  };
 
   useEffect(() => {
     let timer: NodeJS.Timeout;
@@ -39,14 +50,31 @@ export default function CreativePause({ onComplete, worldLevel }: CreativePauseP
     setStage('summary');
   };
 
-  const handleSubmit = () => {
+  const [isClosing, setIsClosing] = useState(false);
+
+  const handleFinish = () => {
+    setIsClosing(true);
+    setTimeout(() => {
+      finishGame(200);
+    }, 500);
+  };
+
+  const handleSubmit = async () => {
     if (summary.trim().length > 10) {
       setIsComplete(true);
-      setTimeout(() => onComplete(200), 2000);
+      setIsGeneratingSuggestion(true);
+      
+      try {
+        const suggestion = await generateDesignSuggestion(summary);
+        setAiSuggestion(suggestion);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setIsGeneratingSuggestion(false);
+      }
     } else {
-      // If they don't write enough, they get 0 points but still advance
       setIsComplete(true);
-      setTimeout(() => onComplete(0), 2000);
+      setTimeout(() => finishGame(0), 2000);
     }
   };
 
@@ -205,7 +233,7 @@ export default function CreativePause({ onComplete, worldLevel }: CreativePauseP
                 value={summary}
                 onChange={(e) => setSummary(e.target.value)}
                 placeholder="Escribe tu resumen aquí... (mínimo 10 caracteres)"
-                className="relative w-full h-40 sm:h-48 p-5 rounded-[1.5rem] border border-white/20 bg-white/10 backdrop-blur-md focus:border-[#00F5D4] focus:ring-0 outline-none resize-none transition-all text-base sm:text-lg text-white placeholder:text-white/40 shadow-inner"
+                className="relative w-full h-32 sm:h-40 p-5 rounded-[1.5rem] border border-white/20 bg-white/10 backdrop-blur-md focus:border-[#00F5D4] focus:ring-0 outline-none resize-none transition-all text-base sm:text-lg text-white placeholder:text-white/40 shadow-inner"
               />
             </div>
 
@@ -239,7 +267,7 @@ export default function CreativePause({ onComplete, worldLevel }: CreativePauseP
             <h3 className="text-3xl sm:text-4xl font-black text-white mb-4 tracking-tight">
               ¡Mente <span className="text-[#00F5D4]">Refrescada!</span>
             </h3>
-            <div className="bg-white/10 backdrop-blur-md p-5 rounded-3xl shadow-lg border border-white/20 max-w-sm w-full">
+            <div className="bg-white/10 backdrop-blur-md p-5 rounded-3xl shadow-lg border border-white/20 max-w-md w-full mb-6">
               <p className="text-white/80 text-lg sm:text-xl font-medium mb-2">
                 {summary.trim().length > 10 
                   ? 'Excelente resumen.' 
@@ -250,6 +278,55 @@ export default function CreativePause({ onComplete, worldLevel }: CreativePauseP
                 <Sparkles size={24} />
               </p>
             </div>
+
+            <AnimatePresence>
+              {(aiSuggestion || isGeneratingSuggestion) && summary.trim().length > 10 && !isClosing && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20, scale: 0.95 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -20, scale: 0.95 }}
+                  className="w-full max-w-md bg-gradient-to-br from-indigo-500/20 to-purple-500/20 backdrop-blur-md border border-indigo-400/30 rounded-2xl p-5 relative overflow-hidden text-left mb-6 shadow-lg shadow-indigo-500/10"
+                >
+                  <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-[#00F5D4] to-[#00B4D8]"></div>
+                  
+                  <h4 className="text-[#00F5D4] font-bold text-sm sm:text-base flex items-center gap-2 mb-3">
+                    <Sparkles size={16} />
+                    Inspiración de Diseño
+                  </h4>
+                  
+                  {isGeneratingSuggestion ? (
+                    <div className="flex items-center gap-3 text-white/70 py-4">
+                      <Loader2 size={20} className="animate-spin text-[#00F5D4]" />
+                      <span className="text-sm font-medium">Analizando y conectando con el diseño gráfico...</span>
+                    </div>
+                  ) : (
+                    <motion.p 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 0.2 }}
+                      className="text-white/95 text-sm sm:text-base leading-relaxed font-medium"
+                    >
+                      {aiSuggestion}
+                    </motion.p>
+                  )}
+                </motion.div>
+              )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {!isGeneratingSuggestion && summary.trim().length > 10 && !isClosing && (
+                <motion.button
+                  key="finish-btn"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  exit={{ opacity: 0, scale: 0.9 }}
+                  onClick={handleFinish}
+                  className="px-8 py-3 bg-white/10 hover:bg-white/20 border border-white/20 text-white rounded-full font-bold transition-all flex items-center gap-2 mt-4"
+                >
+                  Finalizar <CheckCircle2 size={18} />
+                </motion.button>
+              )}
+            </AnimatePresence>
           </motion.div>
         )}
       </AnimatePresence>
