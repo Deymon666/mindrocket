@@ -5,7 +5,7 @@ import { ArrowLeft, Sparkles, Dna } from 'lucide-react';
 const MONSTERS = ['👾', '👽', '🤖', '👻', '🐙', '🦖', '🦉', '🐸', '🦄', '🐲'];
 
 interface NameEntryScreenProps {
-  onComplete: (name: string, avatar: string) => void;
+  onComplete: (name: string, avatar: string) => Promise<void> | void;
   onBack: () => void;
   key?: string;
 }
@@ -13,6 +13,7 @@ interface NameEntryScreenProps {
 export default function NameEntryScreen({ onComplete, onBack }: NameEntryScreenProps) {
   const [name, setName] = useState('');
   const [avatar, setAvatar] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
     setAvatar(MONSTERS[Math.floor(Math.random() * MONSTERS.length)]);
@@ -24,6 +25,16 @@ export default function NameEntryScreen({ onComplete, onBack }: NameEntryScreenP
       newAvatar = MONSTERS[Math.floor(Math.random() * MONSTERS.length)];
     } while (newAvatar === avatar);
     setAvatar(newAvatar);
+  };
+
+  const handleSubmit = async () => {
+    if (!name.trim() || isLoading) return;
+    setIsLoading(true);
+    try {
+      await onComplete(name, avatar);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -79,15 +90,15 @@ export default function NameEntryScreen({ onComplete, onBack }: NameEntryScreenP
         <motion.button
           whileHover={{ scale: 1.05, translateY: -2 }}
           whileTap={{ scale: 0.95 }}
-          onClick={() => onComplete(name, avatar)}
-          disabled={!name.trim()}
+          onClick={handleSubmit}
+          disabled={!name.trim() || isLoading}
           className={`mt-10 w-full py-4 rounded-2xl font-black text-xl shadow-[0_8px_0_rgba(0,0,0,0.2)] transition-all flex items-center justify-center gap-2 border-2 border-white/20
-            ${name.trim() 
-              ? 'bg-gradient-to-r from-[#00F5D4] to-[#00B4D8] text-white active:translate-y-[8px] active:shadow-none' 
-              : 'bg-gray-500/50 text-white/50 cursor-not-allowed'}`}
+            ${!name.trim() || isLoading
+              ? 'bg-gray-500/50 text-white/50 cursor-not-allowed'
+              : 'bg-gradient-to-r from-[#00F5D4] to-[#00B4D8] text-white active:translate-y-[8px] active:shadow-none'}`}
         >
           <Sparkles size={24} />
-          Continuar
+          {isLoading ? 'Cargando...' : 'Continuar'}
         </motion.button>
       </div>
     </motion.div>

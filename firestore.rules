@@ -1,0 +1,39 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() { return request.auth != null; }
+    function incoming() { return request.resource.data; }
+    function existing() { return resource.data; }
+    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['name', 'score', 'world', 'activeWorld', 'currentGameIndex', 'avatar']) 
+        && data.name is string && data.name.size() <= 64 
+        && data.avatar is string && data.avatar.size() <= 10
+        && data.score is number 
+        && data.world is number 
+        && data.activeWorld is number 
+        && data.currentGameIndex is number;
+    }
+
+    match /users/{nameId} {
+      // Allow any signed in anonymous user to read the user by their name
+      allow read: if isSignedIn() && isValidId(nameId);
+      
+      allow create: if isSignedIn() 
+        && isValidId(nameId)
+        && isValidUser(incoming())
+        && incoming().name == nameId;
+
+      allow update: if isSignedIn() 
+        && isValidId(nameId)
+        && isValidUser(incoming())
+        && incoming().name == existing().name
+        && incoming().diff(existing()).affectedKeys().hasOnly(['avatar', 'score', 'world', 'activeWorld', 'currentGameIndex']);
+    }
+  }
+}

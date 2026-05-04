@@ -12,6 +12,7 @@ import CreativePause from './components/games/CreativePause';
 import WelcomePopup from './components/WelcomePopup';
 import confetti from 'canvas-confetti';
 import { Rocket, Star, Trophy, ArrowLeft, Sparkles } from 'lucide-react';
+import { loginAndGetProgress, saveProgress } from './services/dbService';
 
 export type GameState = 'title' | 'name_entry' | 'welcome' | 'menu' | 'world_levels' | 'playing' | 'transition' | 'game_over';
 export type MinigameType = 'crossword' | 'basic_color' | 'advanced_color' | 'creative_pause';
@@ -95,10 +96,12 @@ export default function App() {
     setCurrentMinigames(generateWorld(selectedWorldId));
     setCurrentGameIndex(0);
     setGameState('playing');
+    saveProgress(playerName, { activeWorld: selectedWorldId, currentGameIndex: 0 });
   };
 
   const handleGameComplete = (pointsEarned: number) => {
-    setScore(prev => prev + pointsEarned);
+    const newScore = score + pointsEarned;
+    setScore(newScore);
     
     if (pointsEarned > 0) {
       playSuccessSound();
@@ -111,17 +114,22 @@ export default function App() {
     }
 
     if (currentGameIndex < 4) {
-      setCurrentGameIndex(prev => prev + 1);
+      const nextIndex = currentGameIndex + 1;
+      setCurrentGameIndex(nextIndex);
+      saveProgress(playerName, { score: newScore, currentGameIndex: nextIndex });
     } else {
       // World complete
       if (activeWorld === world) {
+        const nextWorld = world + 1;
         setGameState('transition');
+        saveProgress(playerName, { score: newScore, world: nextWorld, activeWorld: nextWorld, currentGameIndex: 0 });
         setTimeout(() => {
-          setWorld(prev => prev + 1);
+          setWorld(nextWorld);
           setGameState('menu'); // Go back to map after transition
         }, 3000); // 3 seconds transition
       } else {
         // Replayed an old world, just go back to menu
+        saveProgress(playerName, { score: newScore, currentGameIndex: 0 });
         setGameState('menu');
       }
     }
@@ -129,7 +137,9 @@ export default function App() {
 
   const handleUseHint = () => {
     if (score >= 20) {
-      setScore(prev => prev - 20);
+      const newScore = score - 20;
+      setScore(newScore);
+      saveProgress(playerName, { score: newScore });
       return true;
     }
     return false;
@@ -196,11 +206,33 @@ export default function App() {
           {gameState === 'name_entry' && (
             <NameEntryScreen 
               key="name_entry" 
-              onComplete={(name, avatar) => {
+              onComplete={async (name, avatar) => {
+                const userData = await loginAndGetProgress(name, avatar);
+                
                 setPlayerName(name);
-                setPlayerAvatar(avatar);
-                setShowWelcomePopup(true);
-                setGameState('welcome');
+                
+                if (userData) {
+                  setPlayerAvatar(userData.avatar || avatar);
+                  setScore(userData.score || 0);
+                  setWorld(userData.world || 1);
+                  setActiveWorld(userData.activeWorld || userData.world || 1);
+                  
+                  // If they were strictly in the middle of a world, resume it 
+                  // or just let them go to the menu
+                  if (userData.currentGameIndex && userData.currentGameIndex > 0) {
+                     setCurrentGameIndex(userData.currentGameIndex);
+                     setCurrentMinigames(generateWorld(userData.activeWorld || userData.world || 1));
+                     setShowWelcomePopup(true);
+                     setGameState('welcome'); // Show welcome, then menu or resume
+                  } else {
+                     setShowWelcomePopup(true);
+                     setGameState('welcome');
+                  }
+                } else {
+                  setPlayerAvatar(avatar);
+                  setShowWelcomePopup(true);
+                  setGameState('welcome');
+                }
               }}
               onBack={() => setGameState('title')}
             />
@@ -316,8 +348,14 @@ export default function App() {
             setShowWelcomePopup(false);
             if (score === 0) {
               setScore(50);
+              saveProgress(playerName, { score: 50 });
             }
-            setGameState('menu');
+            
+            if (currentGameIndex > 0) {
+              setGameState('playing');
+            } else {
+              setGameState('menu');
+            }
           }} 
         />
       </div>

@@ -1,0 +1,45 @@
+{
+  "entities": {
+    "User": {
+      "title": "User Profile",
+      "description": "Stores user progress in the game",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The normalized lowercase name of the user, used as doc ID."
+        },
+        "avatar": {
+          "type": "string"
+        },
+        "score": {
+          "type": "number",
+          "description": "Total score"
+        },
+        "world": {
+          "type": "number",
+          "description": "Highest world unlocked"
+        },
+        "activeWorld": {
+          "type": "number",
+          "description": "Currently active world"
+        },
+        "currentGameIndex": {
+          "type": "number",
+          "description": "Current game index in the active world"
+        },
+         "userId": {
+          "type": "string",
+          "description": "Optional: Firebase Auth UID of the creator"
+        }
+      },
+      "required": ["name", "score", "world", "activeWorld", "currentGameIndex"]
+    }
+  },
+  "firestore": {
+    "users/{nameId}": {
+      "schema": "User",
+      "description": "Stores a user's game progress by their normalized name."
+    }
+  }
+}
