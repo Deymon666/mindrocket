@@ -10,6 +10,7 @@ import BasicColorGame from './components/games/BasicColorGame';
 import AdvancedColorGame from './components/games/AdvancedColorGame';
 import CreativePause from './components/games/CreativePause';
 import WelcomePopup from './components/WelcomePopup';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 import confetti from 'canvas-confetti';
 import { Rocket, Star, Trophy, ArrowLeft, Sparkles } from 'lucide-react';
 import { loginAndGetProgress, saveProgress } from './services/dbService';
@@ -358,6 +359,8 @@ export default function App() {
             }
           }} 
         />
+
+        <PWAInstallPrompt />
       </div>
     </div>
   );
