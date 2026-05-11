@@ -1,11 +1,30 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously } from 'firebase/auth';
 import { getFirestore, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId); // CRITICAL
-export const auth = getAuth();
+// Default configuration for AI Studio environment (from firebase-applet-config.json)
+const appletConfig = {
+  projectId: "gen-lang-client-0969175667",
+  appId: "1:1023759587217:web:0d325c601943ce796fec30",
+  apiKey: "AIzaSyA0YDwpouBhiy6CRWGCjtZ7RamHKveupWc",
+  authDomain: "gen-lang-client-0969175667.firebaseapp.com",
+  firestoreDatabaseId: "ai-studio-e6cbde79-577a-4cf9-a7ab-08dda2fc9ee2",
+  storageBucket: "gen-lang-client-0969175667.firebasestorage.app",
+  messagingSenderId: "1023759587217"
+};
+
+// Configuration prioritizing environment variables (useful for Vercel/External deployment)
+const config = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || appletConfig.apiKey,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || appletConfig.authDomain,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || appletConfig.projectId,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || appletConfig.storageBucket,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || appletConfig.messagingSenderId,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || appletConfig.appId,
+  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || appletConfig.firestoreDatabaseId || "(default)"
+};
+
+const app = initializeApp(config);
+export const db = getFirestore(app, config.firestoreDatabaseId); // CRITICAL
 
 enum OperationType {
   CREATE = 'create',
@@ -36,17 +55,7 @@ interface FirestoreErrorInfo {
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData?.map(provider => ({
-        providerId: provider.providerId,
-        email: provider.email,
-      })) || []
-    },
+    authInfo: {},
     operationType,
     path
   };
@@ -57,15 +66,6 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 const normalizeName = (name: string) => name.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
 
 export async function loginAndGetProgress(name: string, defaultAvatar: string) {
-  if (!auth.currentUser) {
-    try {
-      await signInAnonymously(auth);
-    } catch (e) {
-      console.error("Anonymous auth failed", e);
-      throw e;
-    }
-  }
-
   const nameId = normalizeName(name);
   if (!nameId) return null;
   
@@ -94,7 +94,6 @@ export async function loginAndGetProgress(name: string, defaultAvatar: string) {
 }
 
 export async function saveProgress(name: string, updates: Partial<{score: number, world: number, activeWorld: number, currentGameIndex: number}>) {
-   if (!auth.currentUser) return;
    const nameId = normalizeName(name);
    if (!nameId) return;
 

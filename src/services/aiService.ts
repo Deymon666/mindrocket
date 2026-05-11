@@ -1,6 +1,8 @@
 import { GoogleGenAI } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+// Use VITE_ prefix for client-side Vite compatibility, with fallback to process.env
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY || process.env.GEMINI_API_KEY;
+const ai = new GoogleGenAI({ apiKey: apiKey || "" });
 
 export async function generateDesignSuggestion(summary: string): Promise<string> {
   const prompt = `

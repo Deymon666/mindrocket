@@ -21,16 +21,14 @@ service cloud.firestore {
     }
 
     match /users/{nameId} {
-      // Allow any signed in anonymous user to read the user by their name
-      allow read: if isSignedIn() && isValidId(nameId);
+      // Allow read/write based on name identifier validation
+      allow read: if isValidId(nameId);
       
-      allow create: if isSignedIn() 
-        && isValidId(nameId)
+      allow create: if isValidId(nameId)
         && isValidUser(incoming())
         && incoming().name == nameId;
 
-      allow update: if isSignedIn() 
-        && isValidId(nameId)
+      allow update: if isValidId(nameId)
         && isValidUser(incoming())
         && incoming().name == existing().name
         && incoming().diff(existing()).affectedKeys().hasOnly(['avatar', 'score', 'world', 'activeWorld', 'currentGameIndex']);
