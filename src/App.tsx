@@ -1,8 +1,12 @@
-import { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
+import React, { useState, useEffect, ErrorInfo, ReactNode } from 'react';
 
-class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean, error: Error | null}> {
-  constructor(props: {children: ReactNode}) {
+class ErrorBoundary extends React.Component<{ children: ReactNode }, { hasError: boolean, error: Error | null }> {
+  public state: { hasError: boolean, error: Error | null };
+  public props: { children: ReactNode };
+
+  constructor(props: { children: ReactNode }) {
     super(props);
+    this.props = props;
     this.state = { hasError: false, error: null };
   }
   static getDerivedStateFromError(error: Error) {
@@ -85,6 +89,52 @@ function AppContent() {
   const [currentMinigames, setCurrentMinigames] = useState<Minigame[]>([]);
   const [currentGameIndex, setCurrentGameIndex] = useState(0);
   const [showWelcomePopup, setShowWelcomePopup] = useState(false);
+
+  // Soporte de instalación PWA
+  const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
+  const [showInstallBtn, setShowInstallBtn] = useState(false);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setShowInstallBtn(true);
+      console.log('beforeinstallprompt event detected');
+    };
+
+    const handleAppInstalled = () => {
+      setDeferredPrompt(null);
+      setShowInstallBtn(false);
+      console.log('App ya ha sido instalada');
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    // Si ya está en modo standalone, ocultamos el botón
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
+      setShowInstallBtn(false);
+    }
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const installApp = async () => {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    try {
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`Usuario eligió instalar PWA: ${outcome}`);
+    } catch (err) {
+      console.error('Error durante la instalación', err);
+    }
+    setDeferredPrompt(null);
+    setShowInstallBtn(false);
+  };
+
 
   // Generate 5 random minigames for a world
   const generateWorld = (worldLevel: number) => {
@@ -225,7 +275,12 @@ function AppContent() {
 
         <AnimatePresence mode="wait">
           {gameState === 'title' && (
-            <TitleScreen key="title" onStart={() => setGameState('name_entry')} />
+            <TitleScreen 
+              key="title" 
+              onStart={() => setGameState('name_entry')} 
+              showInstallBtn={showInstallBtn}
+              onInstall={installApp}
+            />
           )}
 
           {gameState === 'name_entry' && (

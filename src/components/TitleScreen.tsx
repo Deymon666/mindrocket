@@ -1,12 +1,14 @@
 import { motion } from 'motion/react';
-import { Rocket } from 'lucide-react';
+import { Rocket, Download } from 'lucide-react';
 
 interface TitleScreenProps {
   onStart: () => void;
   key?: string;
+  showInstallBtn?: boolean;
+  onInstall?: () => void;
 }
 
-export default function TitleScreen({ onStart }: TitleScreenProps) {
+export default function TitleScreen({ onStart, showInstallBtn, onInstall }: TitleScreenProps) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -28,15 +30,32 @@ export default function TitleScreen({ onStart }: TitleScreenProps) {
         </div>
       </motion.div>
 
-      <motion.button
-        whileHover={{ scale: 1.05, translateY: -5 }}
-        whileTap={{ scale: 0.95 }}
-        onClick={onStart}
-        className="relative px-12 py-5 bg-gradient-to-b from-[#FF477E] to-[#FF0055] text-white rounded-[2.5rem] font-black text-3xl shadow-[0_8px_0_#C1121F,0_15px_30px_rgba(0,0,0,0.4)] transition-all flex items-center gap-3 border-4 border-white/20 active:shadow-[0_0px_0_#C1121F,0_5px_10px_rgba(0,0,0,0.4)] active:translate-y-[8px]"
-      >
-        <span className="drop-shadow-md">DESPEGAR</span>
-        <Rocket size={28} className="fill-white drop-shadow-md" />
-      </motion.button>
+      <div className="flex flex-col items-center gap-4">
+        <motion.button
+          whileHover={{ scale: 1.05, translateY: -5 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={onStart}
+          className="relative px-12 py-5 bg-gradient-to-b from-[#FF477E] to-[#FF0055] text-white rounded-[2.5rem] font-black text-3xl shadow-[0_8px_0_#C1121F,0_15px_30px_rgba(0,0,0,0.4)] transition-all flex items-center gap-3 border-4 border-white/20 active:shadow-[0_0px_0_#C1121F,0_5px_10px_rgba(0,0,0,0.4)] active:translate-y-[8px]"
+        >
+          <span className="drop-shadow-md">DESPEGAR</span>
+          <Rocket size={28} className="fill-white drop-shadow-md" />
+        </motion.button>
+
+        {showInstallBtn && onInstall && (
+          <motion.button
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={onInstall}
+            className="flex items-center gap-2 px-6 py-2.5 bg-white/15 hover:bg-white/25 border border-white/20 rounded-full text-white text-sm font-black shadow-lg transition-colors backdrop-blur-md cursor-pointer"
+          >
+            <Download size={16} className="text-[#00E5FF] animate-bounce" />
+            <span>Instalar Aplicación</span>
+          </motion.button>
+        )}
+      </div>
     </motion.div>
   );
 }
+
