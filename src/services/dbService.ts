@@ -1,30 +1,24 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { initializeApp, FirebaseApp } from 'firebase/app';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, Firestore } from 'firebase/firestore';
+import firebaseConfig from '../../firebase-applet-config.json';
 
-// Default configuration for AI Studio environment (from firebase-applet-config.json)
-const appletConfig = {
-  projectId: "gen-lang-client-0969175667",
-  appId: "1:1023759587217:web:0d325c601943ce796fec30",
-  apiKey: "AIzaSyA0YDwpouBhiy6CRWGCjtZ7RamHKveupWc",
-  authDomain: "gen-lang-client-0969175667.firebaseapp.com",
-  firestoreDatabaseId: "ai-studio-e6cbde79-577a-4cf9-a7ab-08dda2fc9ee2",
-  storageBucket: "gen-lang-client-0969175667.firebasestorage.app",
-  messagingSenderId: "1023759587217"
-};
+let app: FirebaseApp | null = null;
+let db: Firestore | null = null;
 
-// Configuration prioritizing environment variables (useful for Vercel/External deployment)
-const config = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || appletConfig.apiKey,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || appletConfig.authDomain,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || appletConfig.projectId,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || appletConfig.storageBucket,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || appletConfig.messagingSenderId,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID || appletConfig.appId,
-  firestoreDatabaseId: import.meta.env.VITE_FIREBASE_DATABASE_ID || appletConfig.firestoreDatabaseId || "(default)"
-};
-
-const app = initializeApp(config);
-export const db = getFirestore(app, config.firestoreDatabaseId); // CRITICAL
+function getDb(): Firestore {
+  if (!db) {
+    try {
+      app = initializeApp(firebaseConfig);
+      db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+    } catch (e) {
+      console.error("Failed to initialize Firebase", e);
+      // Fallback pseudo object to prevent further crashes, 
+      // although operations will still fail in their try/catch blocks
+      throw e;
+    }
+  }
+  return db;
+}
 
 enum OperationType {
   CREATE = 'create',
@@ -59,8 +53,10 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
     operationType,
     path
   };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  console.error('Firestore Error: ', errInfo);
+  // Do not throw an unhandled error out of this; return null so the app continues gracefully
+  // This prevents the application from crashing and turning to a white screen
+  return null;
 }
 
 const normalizeName = (name: string) => name.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
@@ -72,7 +68,8 @@ export async function loginAndGetProgress(name: string, defaultAvatar: string) {
   const path = `users/${nameId}`;
   
   try {
-    const d = await getDoc(doc(db, 'users', nameId));
+    const database = getDb();
+    const d = await getDoc(doc(database, 'users', nameId));
     if (d.exists()) {
       return d.data();
     } else {
@@ -85,11 +82,12 @@ export async function loginAndGetProgress(name: string, defaultAvatar: string) {
         activeWorld: 1,
         currentGameIndex: 0
       };
-      await setDoc(doc(db, 'users', nameId), newUser);
+      await setDoc(doc(database, 'users', nameId), newUser);
       return newUser;
     }
   } catch (err) {
     handleFirestoreError(err, OperationType.GET, path);
+    return null;
   }
 }
 
@@ -100,7 +98,8 @@ export async function saveProgress(name: string, updates: Partial<{score: number
    const path = `users/${nameId}`;
 
    try {
-     await updateDoc(doc(db, 'users', nameId), updates);
+     const database = getDb();
+     await updateDoc(doc(database, 'users', nameId), updates);
    } catch (err) {
      handleFirestoreError(err, OperationType.UPDATE, path);
    }

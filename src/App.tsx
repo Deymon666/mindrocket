@@ -1,4 +1,29 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
+
+class ErrorBoundary extends Component<{children: ReactNode}, {hasError: boolean, error: Error | null}> {
+  constructor(props: {children: ReactNode}) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error: Error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
+    console.error("ErrorBoundary caught an error", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{color: 'red', zIndex: 9999, position: 'absolute', top: 0, left: 0, padding: '20px', backgroundColor: 'black', width: '100%', height: '100%'}}>
+          <h2>Something went wrong.</h2>
+          <pre style={{whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '12px'}}>{this.state.error?.toString()}</pre>
+          <pre style={{whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '10px'}}>{this.state.error?.stack}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 import { motion, AnimatePresence } from 'motion/react';
 import TitleScreen from './components/TitleScreen';
 import NameEntryScreen from './components/NameEntryScreen';
@@ -10,7 +35,6 @@ import BasicColorGame from './components/games/BasicColorGame';
 import AdvancedColorGame from './components/games/AdvancedColorGame';
 import CreativePause from './components/games/CreativePause';
 import WelcomePopup from './components/WelcomePopup';
-import PWAInstallPrompt from './components/PWAInstallPrompt';
 import confetti from 'canvas-confetti';
 import { Rocket, Star, Trophy, ArrowLeft, Sparkles } from 'lucide-react';
 import { loginAndGetProgress, saveProgress } from './services/dbService';
@@ -50,7 +74,7 @@ const playSuccessSound = () => {
   }
 };
 
-export default function App() {
+function AppContent() {
   const [gameState, setGameState] = useState<GameState>('title');
   const [playerName, setPlayerName] = useState('');
   const [playerAvatar, setPlayerAvatar] = useState('👾');
@@ -359,9 +383,15 @@ export default function App() {
             }
           }} 
         />
-
-        <PWAInstallPrompt />
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <AppContent />
+    </ErrorBoundary>
   );
 }
