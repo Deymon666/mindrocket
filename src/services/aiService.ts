@@ -81,14 +81,9 @@ function getAiClient() {
   }
 
   const cleanKey = apiKey.trim();
-  if (
-    cleanKey === "" ||
-    cleanKey === "undefined" ||
-    cleanKey === "null" ||
-    cleanKey.includes("MY_GEMINI_API_KEY") ||
-    cleanKey.includes("YOUR_API_KEY") ||
-    cleanKey.length < 10
-  ) {
+  
+  // A real Google Gemini API key always starts with 'AIzaSy' and is around 39 characters
+  if (!cleanKey.startsWith("AIza") || cleanKey.length < 25) {
     return null;
   }
 
