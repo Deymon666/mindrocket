@@ -21,7 +21,12 @@ export default function TitleScreen({ onStart, showInstallBtn, onInstall }: Titl
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
         className="flex flex-col items-center"
       >
-        <Rocket size={100} className="text-white drop-shadow-[0_0_30px_rgba(255,71,126,0.8)] mb-6" />
+        <img 
+          src="/icon-512.png" 
+          alt="MindRocket Mascot" 
+          className="w-32 h-32 rounded-3xl object-cover shadow-[0_0_40px_rgba(0,229,255,0.6)] border-4 border-white/20 mb-6"
+          referrerPolicy="no-referrer"
+        />
         <h1 className="text-6xl sm:text-7xl font-black text-white mb-4 tracking-tight drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] text-center leading-none">
           Mind<br/><span className="text-transparent bg-clip-text bg-gradient-to-b from-[#FEE440] to-[#F58700] filter drop-shadow-md">Rocket</span>
         </h1>
