@@ -22,14 +22,12 @@ export default function TitleScreen({ onStart, showInstallBtn, onInstall }: Titl
         className="flex flex-col items-center"
       >
         <img 
-          src="/icon-512.png" 
+          src="/mindrocket_mascot.png" 
           alt="MindRocket Mascot" 
-          className="w-32 h-32 rounded-3xl object-cover shadow-[0_0_40px_rgba(0,229,255,0.6)] border-4 border-white/20 mb-6"
+          className="w-40 h-40 object-contain mb-6 drop-shadow-[0_0_30px_rgba(0,229,255,0.6)]"
           referrerPolicy="no-referrer"
         />
-        <h1 className="text-6xl sm:text-7xl font-black text-white mb-4 tracking-tight drop-shadow-[0_4px_4px_rgba(0,0,0,0.5)] text-center leading-none">
-          Mind<br/><span className="text-transparent bg-clip-text bg-gradient-to-b from-[#FEE440] to-[#F58700] filter drop-shadow-md">Rocket</span>
-        </h1>
+       
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-6 py-2 shadow-lg mb-12">
           <p className="text-white/90 text-lg font-sans font-bold tracking-wide">¡Aprende diseño jugando!</p>
         </div>
