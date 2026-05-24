@@ -75,14 +75,25 @@ function getAiClient() {
     }
   }
 
-  // We intentionally return null if no key is configured, rather than throwing.
-  // This allows the app to operate fully keyless in public web scenarios.
-  if (!apiKey) {
+  // Ensure apiKey is a valid string and not literal placeholder/undefined strings
+  if (!apiKey || typeof apiKey !== 'string') {
+    return null;
+  }
+
+  const cleanKey = apiKey.trim();
+  if (
+    cleanKey === "" ||
+    cleanKey === "undefined" ||
+    cleanKey === "null" ||
+    cleanKey.includes("MY_GEMINI_API_KEY") ||
+    cleanKey.includes("YOUR_API_KEY") ||
+    cleanKey.length < 10
+  ) {
     return null;
   }
 
   try {
-    aiClient = new GoogleGenAI({ apiKey });
+    aiClient = new GoogleGenAI({ apiKey: cleanKey });
     return aiClient;
   } catch (err) {
     console.error("[Gemini API] Error initializing GoogleGenAI client:", err);
