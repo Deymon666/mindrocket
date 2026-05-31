@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion } from 'motion/react';
 import mascotImg from '../assets/images/mindrocket_mascot_new_1779610732760.png';
 
 interface GoogleLoginProps {
@@ -9,18 +8,8 @@ interface GoogleLoginProps {
   onInstall?: () => void;
 }
 
-export default function GoogleLogin({ onLogin, isLoading, showInstallBtn, onInstall }: GoogleLoginProps) {
-  const [showInstallGuide, setShowInstallGuide] = useState(false);
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches;
-
-  const handleInstallClick = () => {
-    if (showInstallBtn && onInstall) {
-      onInstall();
-    } else {
-      setShowInstallGuide(true);
-    }
-  };
+export default function GoogleLogin({ onLogin, isLoading, onInstall }: GoogleLoginProps) {
+  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
 
   return (
     <motion.div
@@ -68,14 +57,14 @@ export default function GoogleLogin({ onLogin, isLoading, showInstallBtn, onInst
         {isLoading ? 'Iniciando sesión...' : 'Continuar con Google'}
       </motion.button>
 
-      {/* Botón Instalar — siempre visible si no está en standalone */}
+      {/* Botón Instalar — siempre visible si no está instalada */}
       {!isStandalone && (
         <motion.button
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
           whileHover={{ scale: 1.03, translateY: -3 }}
           whileTap={{ scale: 0.97, translateY: 2 }}
-          onClick={handleInstallClick}
+          onClick={onInstall}
           className="w-full relative flex items-center justify-center gap-2 font-black text-lg py-4 px-6 rounded-2xl text-white"
           style={{
             background: 'linear-gradient(to bottom, #7C3AED, #5B21B6)',
@@ -86,30 +75,6 @@ export default function GoogleLogin({ onLogin, isLoading, showInstallBtn, onInst
           📲 Instalar App
         </motion.button>
       )}
-
-      {/* Guía de instalación manual */}
-      <AnimatePresence>
-        {showInstallGuide && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            className="mt-4 w-full bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/20"
-          >
-            <p className="text-white font-bold text-sm mb-2 text-center">¿Cómo instalar?</p>
-            {isIOS ? (
-              <p className="text-white/70 text-xs text-center">
-                En Safari: toca <strong>Compartir</strong> → <strong>"Agregar a pantalla de inicio"</strong>
-              </p>
-            ) : (
-              <p className="text-white/70 text-xs text-center">
-                En Chrome: toca los <strong>3 puntos ···</strong> → <strong>"Instalar aplicación"</strong> o <strong>"Añadir a pantalla de inicio"</strong>
-              </p>
-            )}
-            <button onClick={() => setShowInstallGuide(false)} className="mt-3 w-full text-white/50 text-xs">Cerrar</button>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <p className="text-white/30 text-xs mt-6 text-center">
         Tu progreso se guarda automáticamente en tu cuenta
