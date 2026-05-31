@@ -1,106 +1,94 @@
 import { initializeApp, FirebaseApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc, updateDoc, Firestore } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged, User, Auth } from 'firebase/auth';
 import firebaseConfig from '../../firebase-applet-config.json';
 
 let app: FirebaseApp | null = null;
 let db: Firestore | null = null;
+let auth: Auth | null = null;
 
 function getDb(): Firestore {
   if (!db) {
-    try {
-      app = initializeApp(firebaseConfig);
-      db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
-    } catch (e) {
-      console.error("Failed to initialize Firebase", e);
-      // Fallback pseudo object to prevent further crashes, 
-      // although operations will still fail in their try/catch blocks
-      throw e;
-    }
+    app = initializeApp(firebaseConfig);
+    db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
+    auth = getAuth(app);
   }
   return db;
 }
 
-enum OperationType {
-  CREATE = 'create',
-  UPDATE = 'update',
-  DELETE = 'delete',
-  LIST = 'list',
-  GET = 'get',
-  WRITE = 'write',
+function getAuthInstance(): Auth {
+  getDb();
+  return auth!;
 }
 
-interface FirestoreErrorInfo {
-  error: string;
-  operationType: OperationType;
-  path: string | null;
-  authInfo: {
-    userId?: string | null;
-    email?: string | null;
-    emailVerified?: boolean | null;
-    isAnonymous?: boolean | null;
-    tenantId?: string | null;
-    providerInfo?: {
-      providerId?: string | null;
-      email?: string | null;
-    }[];
-  }
-}
-
-function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {},
-    operationType,
-    path
-  };
-  console.error('Firestore Error: ', errInfo);
-  // Do not throw an unhandled error out of this; return null so the app continues gracefully
-  // This prevents the application from crashing and turning to a white screen
-  return null;
-}
-
-const normalizeName = (name: string) => name.trim().toLowerCase().replace(/[^a-z0-9_-]/g, '-');
-
-export async function loginAndGetProgress(name: string, defaultAvatar: string) {
-  const nameId = normalizeName(name);
-  if (!nameId) return null;
-  
-  const path = `users/${nameId}`;
-  
+// Login con Google
+export async function loginWithGoogle(): Promise<User | null> {
   try {
-    const database = getDb();
-    const d = await getDoc(doc(database, 'users', nameId));
-    if (d.exists()) {
-      return d.data();
-    } else {
-      // Create new user profile
-      const newUser = {
-        name: nameId,
-        avatar: defaultAvatar,
+    const provider = new GoogleAuthProvider();
+    const result = await signInWithPopup(getAuthInstance(), provider);
+    const user = result.user;
+
+    // Crear perfil en Firestore si no existe
+    const db = getDb();
+    const ref = doc(db, 'users', user.uid);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) {
+      await setDoc(ref, {
+        name: user.displayName || 'Jugador',
+        avatar: '👾',
         score: 0,
         world: 1,
         activeWorld: 1,
-        currentGameIndex: 0
-      };
-      await setDoc(doc(database, 'users', nameId), newUser);
-      return newUser;
+        currentGameIndex: 0,
+        email: user.email,
+        photoURL: user.photoURL,
+      });
     }
+    return user;
   } catch (err) {
-    handleFirestoreError(err, OperationType.GET, path);
+    console.error('Error en login con Google', err);
     return null;
   }
 }
 
-export async function saveProgress(name: string, updates: Partial<{score: number, world: number, activeWorld: number, currentGameIndex: number}>) {
-   const nameId = normalizeName(name);
-   if (!nameId) return;
+// Obtener progreso del usuario
+export async function getProgress(uid: string) {
+  try {
+    const db = getDb();
+    const snap = await getDoc(doc(db, 'users', uid));
+    if (snap.exists()) return snap.data();
+    return null;
+  } catch (err) {
+    console.error('Error obteniendo progreso', err);
+    return null;
+  }
+}
 
-   const path = `users/${nameId}`;
+// Guardar progreso
+export async function saveProgress(uid: string, updates: Partial<{score: number, world: number, activeWorld: number, currentGameIndex: number}>) {
+  try {
+    const db = getDb();
+    await updateDoc(doc(db, 'users', uid), updates);
+  } catch (err) {
+    console.error('Error guardando progreso', err);
+  }
+}
 
-   try {
-     const database = getDb();
-     await updateDoc(doc(database, 'users', nameId), updates);
-   } catch (err) {
-     handleFirestoreError(err, OperationType.UPDATE, path);
-   }
+// Cerrar sesión
+export async function logout() {
+  try {
+    await signOut(getAuthInstance());
+  } catch (err) {
+    console.error('Error cerrando sesión', err);
+  }
+}
+
+// Escuchar cambios de sesión
+export function onAuthChange(callback: (user: User | null) => void) {
+  return onAuthStateChanged(getAuthInstance(), callback);
+}
+
+// Compatibilidad con código anterior
+export async function loginAndGetProgress(name: string, defaultAvatar: string) {
+  return null;
 }
