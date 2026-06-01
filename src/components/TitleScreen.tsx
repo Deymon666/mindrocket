@@ -1,5 +1,6 @@
-import { motion } from 'motion/react';
-import { Rocket, Download } from 'lucide-react';
+import { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Rocket, Download, X, Smartphone, Globe, Info, Apple, CheckCircle2 } from 'lucide-react';
 
 interface TitleScreenProps {
   onStart: () => void;
@@ -19,7 +20,7 @@ export default function TitleScreen({ onStart, showInstallBtn, onInstall }: Titl
       <motion.div
         animate={{ y: [-10, 10, -10] }}
         transition={{ duration: 4, repeat: Infinity, ease: "easeInOut" }}
-        className="flex flex-col items-center"
+        className="flex flex-col items-center animate-fade-in"
       >
         <img 
           src="/mindrocket_mascot.png" 
@@ -29,36 +30,33 @@ export default function TitleScreen({ onStart, showInstallBtn, onInstall }: Titl
         />
        
         <div className="bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-6 py-2 shadow-lg mb-12">
-          <p className="text-white/90 text-lg font-sans font-bold tracking-wide">¡Aprende diseño jugando!</p>
+          <p className="text-white/90 text-sm sm:text-base font-sans font-bold tracking-wide">¡Aprende diseño jugando!</p>
         </div>
       </motion.div>
 
-      <div className="flex flex-col items-center gap-4">
+      <div className="flex flex-col items-center gap-4 w-full max-w-[280px]">
         <motion.button
           whileHover={{ scale: 1.05, translateY: -5 }}
           whileTap={{ scale: 0.95 }}
           onClick={onStart}
-          className="relative px-12 py-5 bg-gradient-to-b from-[#FF477E] to-[#FF0055] text-white rounded-[2.5rem] font-black text-3xl shadow-[0_8px_0_#C1121F,0_15px_30px_rgba(0,0,0,0.4)] transition-all flex items-center gap-3 border-4 border-white/20 active:shadow-[0_0px_0_#C1121F,0_5px_10px_rgba(0,0,0,0.4)] active:translate-y-[8px]"
+          className="w-full relative py-4 bg-gradient-to-b from-[#FF477E] to-[#FF0055] text-white rounded-[2.5rem] font-black text-2xl shadow-[0_6px_0_#C1121F,0_12px_24px_rgba(0,0,0,0.4)] transition-all flex items-center justify-center gap-3 border-4 border-white/20 active:shadow-[0_0px_0_#C1121F,0_3px_6px_rgba(0,0,0,0.4)] active:translate-y-[6px]"
         >
           <span className="drop-shadow-md">DESPEGAR</span>
-          <Rocket size={28} className="fill-white drop-shadow-md" />
+          <Rocket size={24} className="fill-white drop-shadow-md" />
         </motion.button>
 
-        {showInstallBtn && onInstall && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
+        {showInstallBtn && onInstall ? (
+          <button
             onClick={onInstall}
-            className="flex items-center gap-2 px-6 py-2.5 bg-white/15 hover:bg-white/25 border border-white/20 rounded-full text-white text-sm font-black shadow-lg transition-colors backdrop-blur-md cursor-pointer"
+            className="w-full flex items-center justify-center gap-2 px-5 py-3.5 bg-gradient-to-r from-[#00F5D4] to-[#00B4D8] hover:from-[#00F5D4]/90 hover:to-[#00B4D8]/90 text-black text-xs font-black rounded-full shadow-[0_4px_12px_rgba(0,245,212,0.3)] transition-all cursor-pointer animate-pulse active:scale-95 border border-white/10"
           >
-            <Download size={16} className="text-[#00E5FF] animate-bounce" />
+            <Download size={14} className="text-black" />
             <span>Instalar Aplicación</span>
-          </motion.button>
-        )}
+          </button>
+        ) : null}
       </div>
     </motion.div>
   );
 }
+
 
