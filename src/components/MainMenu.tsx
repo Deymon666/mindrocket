@@ -1,6 +1,6 @@
 import { useState, useRef, useLayoutEffect, useEffect } from 'react';
 import { motion, useScroll, useTransform } from 'motion/react';
-import { Rocket, Lock, CheckCircle2, ArrowLeft, Sparkles } from 'lucide-react';
+import { Rocket, Lock, CheckCircle2, LogOut, Sparkles } from 'lucide-react';
 
 interface MainMenuProps {
   onSelectWorld: (worldId: number) => void;
@@ -110,6 +110,25 @@ export default function MainMenu({ onSelectWorld, currentWorld, playerName, play
     }
   });
 
+  // Build the Active SVG path string up to currentWorld
+  let activePathD = "";
+  if (currentWorld > 1) {
+    for (let i = 1; i <= currentWorld; i++) {
+      const planet = getPlanetData(i, currentWorld);
+      const x = planet.x;
+      const y = totalHeight - ((i - 1) * PLANET_SPACING + BOTTOM_PADDING);
+      
+      if (i === 1) {
+        activePathD += `M ${x} ${y} `;
+      } else {
+        const prevX = getPlanetData(i - 1, currentWorld).x;
+        const prevY = totalHeight - ((i - 2) * PLANET_SPACING + BOTTOM_PADDING);
+        const midY = (y + prevY) / 2;
+        activePathD += `C ${prevX} ${midY}, ${x} ${midY}, ${x} ${y} `;
+      }
+    }
+  }
+
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -135,9 +154,10 @@ export default function MainMenu({ onSelectWorld, currentWorld, playerName, play
         <div className="pointer-events-auto flex gap-4">
           <button 
             onClick={onBack}
+            title="Cerrar Sesión"
             className="text-white/80 hover:text-white bg-white/10 p-2.5 rounded-full backdrop-blur-md border border-white/20 transition-all active:scale-95 shadow-lg"
           >
-            <ArrowLeft size={20} />
+            <LogOut size={20} />
           </button>
         </div>
         
@@ -202,7 +222,7 @@ export default function MainMenu({ onSelectWorld, currentWorld, playerName, play
                 initial={{ pathLength: 0 }}
                 animate={{ pathLength: 1 }}
                 transition={{ duration: 1.5, ease: "easeInOut", delay: 0.5 }}
-                d={pathD.split(` ${totalHeight - ((currentWorld) * PLANET_SPACING + BOTTOM_PADDING)}`)[0] + ` ${totalHeight - ((currentWorld - 1) * PLANET_SPACING + BOTTOM_PADDING)}`}
+                d={activePathD}
                 fill="none"
                 stroke="url(#pathGradient)"
                 strokeWidth="6"

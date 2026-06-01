@@ -1,10 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Global Safety Net: default-deny catch-all
     match /{document=**} {
       allow read, write: if false;
     }
 
+    // Helper functions
     function isSignedIn() { return request.auth != null; }
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
@@ -12,23 +14,27 @@ service cloud.firestore {
 
     function isValidUser(data) {
       return data.keys().hasAll(['name', 'score', 'world', 'activeWorld', 'currentGameIndex', 'avatar']) 
-        && data.name is string && data.name.size() <= 64 
-        && data.avatar is string && data.avatar.size() <= 10
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 64 
+        && data.avatar is string && data.avatar.size() > 0 && data.avatar.size() <= 10
         && data.score is number 
         && data.world is number 
         && data.activeWorld is number 
         && data.currentGameIndex is number;
     }
 
-    match /users/{nameId} {
-      // Allow read/write based on name identifier validation
-      allow read: if isValidId(nameId);
+    match /users/{userId} {
+      // Must be authenticated and document ID must match the current authenticated user's uid
+      allow read: if isSignedIn() && isValidId(userId) && userId == request.auth.uid;
       
-      allow create: if isValidId(nameId)
+      allow create: if isSignedIn() 
+        && isValidId(userId) 
+        && userId == request.auth.uid
         && isValidUser(incoming())
-        && incoming().name == nameId;
+        && (incoming().userId == userId || !incoming().keys().hasAny(['userId'])); // Validate optional userId if provided
 
-      allow update: if isValidId(nameId)
+      allow update: if isSignedIn() 
+        && isValidId(userId) 
+        && userId == request.auth.uid
         && isValidUser(incoming())
         && incoming().name == existing().name
         && incoming().diff(existing()).affectedKeys().hasOnly(['avatar', 'score', 'world', 'activeWorld', 'currentGameIndex']);

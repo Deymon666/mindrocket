@@ -10,39 +10,164 @@ interface CrosswordGameProps {
   key?: string;
 }
 
-// CodyCross style puzzles
-const PUZZLES = [
-  {
-    theme: "Arte y Cultura",
-    words: [
-      { answer: "MUSEO", clue: "Institución dedicada a la adquisición y exhibición de obras de arte." },
-      { answer: "MURAL", clue: "Pintura o decoración que se realiza directamente sobre una pared." },
-      { answer: "CINE", clue: "Conocido como el séptimo arte." },
-      { answer: "OBRA", clue: "Creación artística, como un cuadro o una escultura." }
-    ]
-  },
-  {
-    theme: "Moda y Tendencias",
-    words: [
-      { answer: "VOGUE", clue: "Famosa revista de moda y estilo de vida." },
-      { answer: "TELA", clue: "Material tejido usado para confeccionar ropa." },
-      { answer: "RETRO", clue: "Estilo que imita tendencias del pasado." },
-      { answer: "DESFILE", clue: "Evento donde los modelos muestran colecciones de ropa." }
-    ]
-  },
-  {
-    theme: "Diseño y Tipografía",
-    words: [
-      { answer: "SERIF", clue: "Pequeños remates en los extremos de las líneas de los caracteres." },
-      { answer: "PIXEL", clue: "La unidad más pequeña de una imagen digital." },
-      { answer: "COLOR", clue: "Percepción visual generada por la luz, fundamental en diseño." },
-      { answer: "BOCETO", clue: "Esbozo o dibujo preliminar de un proyecto." }
-    ]
-  }
-];
+// Detailed, adaptive puzzles designed specifically for each world level
+const WORLD_PUZZLES: Record<number, { theme: string, words: { answer: string, clue: string }[] }[]> = {
+  1: [
+    {
+      theme: "Arte Clásico y Pinturas",
+      words: [
+        { answer: "MUSEO", clue: "Institución que alberga, conserva y exhibe colecciones de arte." },
+        { answer: "MURAL", clue: "Gran pintura realizada directamente sobre una pared o muro." },
+        { answer: "GRITO", clue: "Famoso cuadro expresionista sobre la angustia, pintado por Edvard Munch." },
+        { answer: "CINE", clue: "El arte de proyectar metrajes de vídeo en gran pantalla." }
+      ]
+    },
+    {
+      theme: "Moda y Diseño Inicial",
+      words: [
+        { answer: "TELA", clue: "Material textil indispensable para la confección de ropa." },
+        { answer: "DIOR", clue: "Elegante diseñador de moda creador del estilo New Look en 1947." },
+        { answer: "ARTE", clue: "Actividad humana que expresa una visión sensible o creativa." },
+        { answer: "MODA", clue: "Uso, modo o costumbre que está en boga durante algún tiempo." }
+      ]
+    },
+    {
+      theme: "Diseño Gráfico Básico",
+      words: [
+        { answer: "COLOR", clue: "Percepción visual fundamental que transmite emociones y contrasta elementos." },
+        { answer: "PIXEL", clue: "La menor unidad homogénea en color que forma parte de una imagen digital." },
+        { answer: "ICONO", clue: "Signo o representación simplificada que remite a un objeto o acción." },
+        { answer: "LOGOTIPO", clue: "Identificación gráfica de una marca compuesta solo por letras o texto." }
+      ]
+    }
+  ],
+  2: [
+    {
+      theme: "Obras de Teatro Clásicas",
+      words: [
+        { answer: "HAMLET", clue: "Tragedia dramática de Shakespeare sobre la traición e indecisión." },
+        { answer: "OTELO", clue: "Obra teatral de Shakespeare que retrata los celos obsesivos." },
+        { answer: "TEATRO", clue: "Edificio o espacio donde se representan obras escénicas en vivo." },
+        { answer: "GRIEGO", clue: "Origen del teatro clásico de tragedias y comedias antiguas de Sófocles." }
+      ]
+    },
+    {
+      theme: "Pinturas Célebres",
+      words: [
+        { answer: "MENINAS", clue: "Famosa pintura barroca de Diego Velázquez retratando la corte real española." },
+        { answer: "MONALISA", clue: "Obra cumbre de Da Vinci alabada por su enigmática y famosa sonrisa." },
+        { answer: "LIENZO", clue: "Tela preparada de cáñamo o lino sobre la cual se pinta al óleo." },
+        { answer: "PINCEL", clue: "Herramienta con finos pelos delgada usada para esparcir pintura." }
+      ]
+    },
+    {
+      theme: "Tipografía de Diseño",
+      words: [
+        { answer: "SERIF", clue: "Pequeño remate o adorno al final de los trazos de una letra." },
+        { answer: "FUENTE", clue: "Conjunto completo de caracteres tipográficos de un mismo diseño y estilo." },
+        { answer: "MARCA", clue: "Identidad comercial o conjunto de valores que representa a una empresa." },
+        { answer: "CURSIVA", clue: "Estilo de letra que se inclina hacia la derecha para dar énfasis." }
+      ]
+    }
+  ],
+  3: [
+    {
+      theme: "Íconos del Diseño",
+      words: [
+        { answer: "CHANEL", clue: "Diseñadora francesa revolucionaria que creó el icónico perfume Nº 5." },
+        { answer: "BAUHAUS", clue: "Influyente escuela alemana que unió el arte, la industria de posguerra y la pura funcionalidad." },
+        { answer: "EAMES", clue: "Matrimonio icónico estadounidense clave en el diseño de sillería orgánica y moderna." },
+        { answer: "BOCETO", clue: "Esbozo inicial rápido o borrador trazado por un diseñador antes de la obra final." }
+      ]
+    },
+    {
+      theme: "Teatro y Drama de Época",
+      words: [
+        { answer: "FAUSTO", clue: "Gran obra clásica en verso escrita por Goethe sobre vender el alma al diablo." },
+        { answer: "DRAMA", clue: "Género teatral profundo caracterizado por conflictos internos serios." },
+        { answer: "MOLIERE", clue: "Famoso dramaturgo francés clave del siglo XVII, autor de 'El Tartufo'." },
+        { answer: "ESCENA", clue: "Parte de un acto de una obra teatral donde actúan los mismos personajes." }
+      ]
+    },
+    {
+      theme: "Composición Gráfica",
+      words: [
+        { answer: "VECTOR", clue: "Imagen digital formada por objetos geométricos independientes basada en fórmulas matemáticas." },
+        { answer: "ESCALA", clue: "Relación de proporción entre las dimensiones reales de un objeto y su dibujo." },
+        { answer: "SIMETRIA", clue: "Disposición exacta de las partes o puntos de un cuerpo de forma idéntica a cada lado." },
+        { answer: "RETICULA", clue: "Estructura de líneas invisibles que ayuda a alinear elementos en un espacio." }
+      ]
+    }
+  ],
+  4: [
+    {
+      theme: "Pinturas de Vanguardia",
+      words: [
+        { answer: "GUERNICA", clue: "Inmenso óleo cúbico contra los estragos de la guerra pintado por Picasso." },
+        { answer: "GIRASOLES", clue: "Célebre serie de vibrantes bodegones florales de color amarillo de Van Gogh." },
+        { answer: "RETRATO", clue: "Representación minuciosa de la fisonomía exterior de una persona real." },
+        { answer: "CUBISMO", clue: "Movimiento fundado por Picasso que rompe del todo con la perspectiva tradicional." }
+      ]
+    },
+    {
+      theme: "Diseño y Alta Costura",
+      words: [
+        { answer: "VERSACE", clue: "Llamativo diseñador italiano creador de glamorosas colecciones neobarrocas." },
+        { answer: "GUCCI", clue: "Prestigiosa marca de moda artesanal de cuero de lujo fundada en Florencia." },
+        { answer: "SILUETA", clue: "Forma y contorno general de un traje textil que define su línea visual." },
+        { answer: "SASTRE", clue: "Oficio primoroso de cortar y confeccionar ropa masculina o trajes a la medida." }
+      ]
+    },
+    {
+      theme: "Identidad Profesional Visual",
+      words: [
+        { answer: "ISOTIPO", clue: "La parte icónica o puramente visual de una marca, sin incluir texto." },
+        { answer: "MAQUETA", clue: "Simulación digital o física previa de un diseño antes de imprimirse o subirse." },
+        { answer: "MOODBOARD", clue: "Muro de inspiración visual con paletas, fotos y texturas para guiar un proyecto." },
+        { answer: "LOGOTIPO", clue: "La firma visual de letras tipográficas que representa a un negocio formal." }
+      ]
+    }
+  ],
+  5: [
+    {
+      theme: "Teatro Trágico Superior",
+      words: [
+        { answer: "MACBETH", clue: "Obra de Shakespeare de gran intensidad sobre la ambición letal del poder." },
+        { answer: "SOFOCLES", clue: "Célebre creador trágico griego de la antigüedad clásica, autor de Edipo Rey." },
+        { answer: "ANTIGONA", clue: "Tragedia que opone la piedad familiar a la cruel ley rígida dictada por el rey Creonte." },
+        { answer: "COMEDIA", clue: "Género escénico divertido o humorístico de final feliz que busca mover a risa." }
+      ]
+    },
+    {
+      theme: "Diseño Maestro de Costura",
+      words: [
+        { answer: "BALENCIAGA", clue: "Diseñador vasco de costura perfecta que asombró a París con sus volúmenes volumétricos." },
+        { answer: "PALETA", clue: "Superficie rígida de madera donde el artista coloca y combina sus pinturas." },
+        { answer: "SURREAL", clue: "Exponente o característica que asocia elementos irracionales sin lógica consciente." },
+        { answer: "VANGUARDIA", clue: "Corriente artística revolucionaria intelectual que combate directamente los ideales clásicos." }
+      ]
+    },
+    {
+      theme: "Branding y Diseño Gráfico Élite",
+      words: [
+        { answer: "KERNING", clue: "Ajuste del espacio de separación entre dos letras individuales consecutivas." },
+        { answer: "PACKAGING", clue: "Diseño del empaque, envase o embalaje que contiene y vende un producto." },
+        { answer: "CMYK", clue: "Modelos de color primarios sustractivos para impresión física en prensa de tinta." },
+        { answer: "JERARQUIA", clue: "Organización visual de la información que dirige el orden en que el ojo lee el contenido." }
+      ]
+    }
+  ]
+};
+
+function getPuzzleForWorld(worldLevel: number) {
+  // Normalize level between 1 and 5
+  const level = Math.max(1, Math.min(5, worldLevel));
+  const options = WORLD_PUZZLES[level];
+  return options[Math.floor(Math.random() * options.length)];
+}
 
 export default function CrosswordGame({ onComplete, worldLevel, score, onUseHint }: CrosswordGameProps) {
-  const [puzzle, setPuzzle] = useState(PUZZLES[0]);
+  const [puzzle, setPuzzle] = useState(() => getPuzzleForWorld(worldLevel));
   const [grid, setGrid] = useState<string[][]>([]);
   const [activeRow, setActiveRow] = useState(0);
   const [activeCol, setActiveCol] = useState(0);
@@ -52,8 +177,8 @@ export default function CrosswordGame({ onComplete, worldLevel, score, onUseHint
   const gridRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // Select puzzle based on world level or random
-    const selectedPuzzle = PUZZLES[Math.floor(Math.random() * PUZZLES.length)];
+    // Select puzzle based on current world level
+    const selectedPuzzle = getPuzzleForWorld(worldLevel);
     setPuzzle(selectedPuzzle);
     
     // Initialize empty grid

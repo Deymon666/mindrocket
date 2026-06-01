@@ -30,6 +30,7 @@ class ErrorBoundary extends React.Component<{ children: ReactNode }, { hasError:
 }
 import { motion, AnimatePresence } from 'motion/react';
 import TitleScreen from './components/TitleScreen';
+import AuthScreen from './components/AuthScreen';
 import NameEntryScreen from './components/NameEntryScreen';
 import MainMenu from './components/MainMenu';
 import WorldTransition from './components/WorldTransition';
@@ -39,11 +40,12 @@ import BasicColorGame from './components/games/BasicColorGame';
 import AdvancedColorGame from './components/games/AdvancedColorGame';
 import CreativePause from './components/games/CreativePause';
 import WelcomePopup from './components/WelcomePopup';
+import { onAuthStateChanged } from 'firebase/auth';
 import confetti from 'canvas-confetti';
-import { Rocket, Star, Trophy, ArrowLeft, Sparkles } from 'lucide-react';
-import { loginAndGetProgress, saveProgress } from './services/dbService';
+import { Sparkles, ArrowLeft } from 'lucide-react';
+import { getMyAuth, getUserProfile, createUserProfile, saveProgress, logoutUser } from './services/dbService';
 
-export type GameState = 'title' | 'name_entry' | 'welcome' | 'menu' | 'world_levels' | 'playing' | 'transition' | 'game_over';
+export type GameState = 'title' | 'auth' | 'name_entry' | 'welcome' | 'menu' | 'world_levels' | 'playing' | 'transition' | 'game_over';
 export type MinigameType = 'crossword' | 'basic_color' | 'advanced_color' | 'creative_pause';
 
 interface Minigame {
@@ -80,6 +82,8 @@ const playSuccessSound = () => {
 
 function AppContent() {
   const [gameState, setGameState] = useState<GameState>('title');
+  const [authUser, setAuthUser] = useState<any>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [playerName, setPlayerName] = useState('');
   const [playerAvatar, setPlayerAvatar] = useState('👾');
   const [world, setWorld] = useState(1); // Max unlocked world
@@ -93,6 +97,54 @@ function AppContent() {
   // Soporte de instalación PWA
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
   const [showInstallBtn, setShowInstallBtn] = useState(false);
+
+  // Listen for Authentication state transitions
+  useEffect(() => {
+    let unsubscribe = () => {};
+    try {
+      const authInstance = getMyAuth();
+      unsubscribe = onAuthStateChanged(authInstance, async (user) => {
+        setAuthUser(user);
+        
+        if (user) {
+          // Fetch existing user progress/profile
+          const profile = await getUserProfile(user.uid);
+          if (profile) {
+            setPlayerName(profile.name);
+            setPlayerAvatar(profile.avatar);
+            setScore(profile.score ?? 0);
+            setWorld(profile.world ?? 1);
+            setActiveWorld(profile.activeWorld ?? profile.world ?? 1);
+            
+            if (typeof profile.currentGameIndex === 'number' && profile.currentGameIndex > 0) {
+              setCurrentGameIndex(profile.currentGameIndex);
+              setCurrentMinigames(generateWorld(profile.activeWorld ?? profile.world ?? 1));
+            }
+            setGameState('menu');
+          } else {
+            // New user authenticated but profile needs customization (choose avatar and name)
+            setGameState('name_entry');
+          }
+        } else {
+          // Logged out
+          setPlayerName('');
+          setPlayerAvatar('👾');
+          setScore(0);
+          setWorld(1);
+          setActiveWorld(1);
+          setCurrentGameIndex(0);
+          setGameState('title');
+        }
+        setIsAuthLoading(false);
+      });
+    } catch (e) {
+      console.error("Auth init error in App:", e);
+      setIsAuthLoading(false);
+    }
+
+    return () => unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const handleBeforeInstallPrompt = (e: Event) => {
@@ -111,7 +163,6 @@ function AppContent() {
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
     window.addEventListener('appinstalled', handleAppInstalled);
 
-    // Si ya está en modo standalone, ocultamos el botón
     if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
       setShowInstallBtn(false);
     }
@@ -134,7 +185,6 @@ function AppContent() {
     setDeferredPrompt(null);
     setShowInstallBtn(false);
   };
-
 
   // Generate 5 random minigames for a world
   const generateWorld = (worldLevel: number) => {
@@ -171,7 +221,9 @@ function AppContent() {
     setCurrentMinigames(generateWorld(selectedWorldId));
     setCurrentGameIndex(0);
     setGameState('playing');
-    saveProgress(playerName, { activeWorld: selectedWorldId, currentGameIndex: 0 });
+    if (authUser) {
+      saveProgress(authUser.uid, { activeWorld: selectedWorldId, currentGameIndex: 0 });
+    }
   };
 
   const handleGameComplete = (pointsEarned: number) => {
@@ -191,20 +243,26 @@ function AppContent() {
     if (currentGameIndex < 4) {
       const nextIndex = currentGameIndex + 1;
       setCurrentGameIndex(nextIndex);
-      saveProgress(playerName, { score: newScore, currentGameIndex: nextIndex });
+      if (authUser) {
+        saveProgress(authUser.uid, { score: newScore, currentGameIndex: nextIndex });
+      }
     } else {
       // World complete
       if (activeWorld === world) {
         const nextWorld = world + 1;
         setGameState('transition');
-        saveProgress(playerName, { score: newScore, world: nextWorld, activeWorld: nextWorld, currentGameIndex: 0 });
+        if (authUser) {
+          saveProgress(authUser.uid, { score: newScore, world: nextWorld, activeWorld: nextWorld, currentGameIndex: 0 });
+        }
         setTimeout(() => {
           setWorld(nextWorld);
           setGameState('menu'); // Go back to map after transition
         }, 3000); // 3 seconds transition
       } else {
         // Replayed an old world, just go back to menu
-        saveProgress(playerName, { score: newScore, currentGameIndex: 0 });
+        if (authUser) {
+          saveProgress(authUser.uid, { score: newScore, currentGameIndex: 0 });
+        }
         setGameState('menu');
       }
     }
@@ -214,7 +272,9 @@ function AppContent() {
     if (score >= 20) {
       const newScore = score - 20;
       setScore(newScore);
-      saveProgress(playerName, { score: newScore });
+      if (authUser) {
+        saveProgress(authUser.uid, { score: newScore });
+      }
       return true;
     }
     return false;
@@ -244,6 +304,18 @@ function AppContent() {
         return null;
     }
   };
+
+  if (isAuthLoading) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center p-4">
+        {/* Loader Screen */}
+        <div className="flex flex-col items-center">
+          <div className="w-14 h-14 border-4 border-[#00F5D4] border-t-transparent rounded-full animate-spin mb-4"></div>
+          <p className="text-white text-sm font-black tracking-widest uppercase">Cargando Órbita...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-900 flex items-center justify-center sm:p-4 md:p-8">
@@ -277,9 +349,35 @@ function AppContent() {
           {gameState === 'title' && (
             <TitleScreen 
               key="title" 
-              onStart={() => setGameState('name_entry')} 
+              onStart={() => setGameState('auth')} 
               showInstallBtn={showInstallBtn}
               onInstall={installApp}
+            />
+          )}
+
+          {gameState === 'auth' && (
+            <AuthScreen
+              key="auth"
+              onAuthSuccess={async (user) => {
+                setAuthUser(user);
+                const profile = await getUserProfile(user.uid);
+                if (profile) {
+                  setPlayerName(profile.name);
+                  setPlayerAvatar(profile.avatar);
+                  setScore(profile.score ?? 0);
+                  setWorld(profile.world ?? 1);
+                  setActiveWorld(profile.activeWorld ?? profile.world ?? 1);
+                  if (typeof profile.currentGameIndex === 'number' && profile.currentGameIndex > 0) {
+                    setCurrentGameIndex(profile.currentGameIndex);
+                    setCurrentMinigames(generateWorld(profile.activeWorld ?? profile.world ?? 1));
+                  }
+                  setShowWelcomePopup(true);
+                  setGameState('welcome');
+                } else {
+                  setGameState('name_entry');
+                }
+              }}
+              onBack={() => setGameState('title')}
             />
           )}
 
@@ -287,34 +385,19 @@ function AppContent() {
             <NameEntryScreen 
               key="name_entry" 
               onComplete={async (name, avatar) => {
-                const userData = await loginAndGetProgress(name, avatar);
-                
-                setPlayerName(name);
-                
-                if (userData) {
-                  setPlayerAvatar(userData.avatar || avatar);
-                  setScore(userData.score || 0);
-                  setWorld(userData.world || 1);
-                  setActiveWorld(userData.activeWorld || userData.world || 1);
-                  
-                  // If they were strictly in the middle of a world, resume it 
-                  // or just let them go to the menu
-                  if (userData.currentGameIndex && userData.currentGameIndex > 0) {
-                     setCurrentGameIndex(userData.currentGameIndex);
-                     setCurrentMinigames(generateWorld(userData.activeWorld || userData.world || 1));
-                     setShowWelcomePopup(true);
-                     setGameState('welcome'); // Show welcome, then menu or resume
-                  } else {
-                     setShowWelcomePopup(true);
-                     setGameState('welcome');
-                  }
-                } else {
+                if (!authUser) return;
+                const profileData = await createUserProfile(authUser.uid, { name, avatar });
+                if (profileData) {
+                  setPlayerName(name);
                   setPlayerAvatar(avatar);
                   setShowWelcomePopup(true);
                   setGameState('welcome');
                 }
               }}
-              onBack={() => setGameState('title')}
+              onBack={async () => {
+                await logoutUser();
+                setGameState('auth');
+              }}
             />
           )}
 
@@ -334,7 +417,9 @@ function AppContent() {
                 playerName={playerName}
                 playerAvatar={playerAvatar}
                 score={score}
-                onBack={() => setGameState('name_entry')}
+                onBack={async () => {
+                  await logoutUser();
+                }}
               />
             </div>
           )}
@@ -428,7 +513,9 @@ function AppContent() {
             setShowWelcomePopup(false);
             if (score === 0) {
               setScore(50);
-              saveProgress(playerName, { score: 50 });
+              if (authUser) {
+                saveProgress(authUser.uid, { score: 50 });
+              }
             }
             
             if (currentGameIndex > 0) {
