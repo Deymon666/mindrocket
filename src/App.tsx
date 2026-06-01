@@ -147,17 +147,11 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    // Verificar si ya fue capturado antes de que React cargara
-    if ((window as any).__installPrompt) {
-      setDeferredPrompt((window as any).__installPrompt);
-      setShowInstallBtn(true);
-    }
-
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      (window as any).__installPrompt = e;
       setDeferredPrompt(e);
       setShowInstallBtn(true);
+      console.log('beforeinstallprompt event detected');
     };
 
     const handleAppInstalled = () => {
@@ -180,19 +174,16 @@ function AppContent() {
   }, []);
 
   const installApp = async () => {
-    const prompt = deferredPrompt || (window as any).__installPrompt;
-    if (prompt) {
-      prompt.prompt();
-      try {
-        const { outcome } = await prompt.userChoice;
-        console.log(`Usuario eligió instalar PWA: ${outcome}`);
-      } catch (err) {
-        console.error('Error durante la instalación', err);
-      }
-      (window as any).__installPrompt = null;
-      setDeferredPrompt(null);
-      setShowInstallBtn(false);
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    try {
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`Usuario eligió instalar PWA: ${outcome}`);
+    } catch (err) {
+      console.error('Error durante la instalación', err);
     }
+    setDeferredPrompt(null);
+    setShowInstallBtn(false);
   };
 
   // Generate 5 random minigames for a world

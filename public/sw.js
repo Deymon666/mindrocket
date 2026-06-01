@@ -1,4 +1,4 @@
-const CACHE_NAME = 'mindrocket-shell-v2';
+const CACHE_NAME = 'mindrocket-shell-v1';
 const URLS_TO_CACHE = [
   '/',
   '/index.html',
@@ -31,23 +31,25 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-
-  const requestUrl = new URL(event.request.url);
-
-  // No cachear peticiones externas (Firebase, etc.)
-  if (requestUrl.origin !== self.location.origin) return;
-
+  
+  // Exclude Firebase Firestore, Auth, and other external/API endpoints from caching
+  const url = new RegExp(event.request.url);
+  if (url.origin !== self.location.origin) {
+    return;
+  }
+  
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
-
+      if (cachedResponse) {
+        return cachedResponse;
+      }
+      
       return fetch(event.request).then((networkResponse) => {
+        // Cache dynamic assets (js, css, images) from the same origin to make them work offline
         if (
-          networkResponse &&
-          networkResponse.status === 200 &&
-          (requestUrl.pathname.includes('/assets/') ||
-           requestUrl.pathname.endsWith('.js') ||
-           requestUrl.pathname.endsWith('.css'))
+          networkResponse && 
+          networkResponse.status === 200 && 
+          (event.request.url.includes('/assets/') || event.request.url.endsWith('.js') || event.request.url.endsWith('.css'))
         ) {
           const responseToCache = networkResponse.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -55,10 +57,12 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return networkResponse;
-      }).catch(() => {
+      }).catch((err) => {
+        // Fallback to offline index.html for navigation requests
         if (event.request.mode === 'navigate') {
           return caches.match('/');
         }
+        throw err;
       });
     })
   );

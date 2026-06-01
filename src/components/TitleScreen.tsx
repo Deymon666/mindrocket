@@ -8,9 +8,7 @@ interface TitleScreenProps {
   onInstall?: () => void;
 }
 
-export default function TitleScreen({ onStart, onInstall }: TitleScreenProps) {
-  const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-
+export default function TitleScreen({ onStart, showInstallBtn, onInstall }: TitleScreenProps) {
   return (
     <motion.div
       initial={{ opacity: 0 }}
@@ -46,7 +44,7 @@ export default function TitleScreen({ onStart, onInstall }: TitleScreenProps) {
           <Rocket size={28} className="fill-white drop-shadow-md" />
         </motion.button>
 
-        {!isStandalone && (
+        {showInstallBtn && onInstall && (
           <motion.button
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -63,3 +61,4 @@ export default function TitleScreen({ onStart, onInstall }: TitleScreenProps) {
     </motion.div>
   );
 }
+
