@@ -42,7 +42,7 @@ import CreativePause from './components/games/CreativePause';
 import WelcomePopup from './components/WelcomePopup';
 import { onAuthStateChanged } from 'firebase/auth';
 import confetti from 'canvas-confetti';
-import { Sparkles, ArrowLeft, X, Download, Apple, Smartphone, Share2, Compass, AlertCircle, RefreshCw } from 'lucide-react';
+import { Sparkles, ArrowLeft } from 'lucide-react';
 import { getMyAuth, getUserProfile, createUserProfile, saveProgress, logoutUser } from './services/dbService';
 
 export type GameState = 'title' | 'auth' | 'name_entry' | 'welcome' | 'menu' | 'world_levels' | 'playing' | 'transition' | 'game_over';
@@ -96,14 +96,7 @@ function AppContent() {
 
   // Soporte de instalación PWA
   const [deferredPrompt, setDeferredPrompt] = useState<any>(null);
-  const [showInstallBtn, setShowInstallBtn] = useState(() => {
-    if (typeof window === 'undefined') return false;
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone;
-    return !isStandalone;
-  });
-  const [showIOSHint, setShowIOSHint] = useState(false);
-  const [showInstallCustomDialog, setShowInstallCustomDialog] = useState(false);
-  const isInIframe = typeof window !== 'undefined' && window.self !== window.top;
+  const [showInstallBtn, setShowInstallBtn] = useState(false);
 
   // Listen for Authentication state transitions
   useEffect(() => {
@@ -154,60 +147,43 @@ function AppContent() {
   }, []);
 
   useEffect(() => {
-    // Verificar si ya fue capturado antes de que React cargara
-    if ((window as any).__installPrompt) {
-      setDeferredPrompt((window as any).__installPrompt);
-      setShowInstallBtn(true);
-    }
-
     const handleBeforeInstallPrompt = (e: Event) => {
       e.preventDefault();
-      (window as any).__installPrompt = e;
       setDeferredPrompt(e);
       setShowInstallBtn(true);
-    };
-
-    const handlePromptReady = () => {
-      if ((window as any).__installPrompt) {
-        setDeferredPrompt((window as any).__installPrompt);
-        setShowInstallBtn(true);
-      }
+      console.log('beforeinstallprompt event detected');
     };
 
     const handleAppInstalled = () => {
-      (window as any).__installPrompt = null;
       setDeferredPrompt(null);
       setShowInstallBtn(false);
+      console.log('App ya ha sido instalada');
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-    window.addEventListener('installpromptready', handlePromptReady);
     window.addEventListener('appinstalled', handleAppInstalled);
+
+    if (window.matchMedia('(display-mode: standalone)').matches || (window.navigator as any).standalone) {
+      setShowInstallBtn(false);
+    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      window.removeEventListener('installpromptready', handlePromptReady);
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);
 
   const installApp = async () => {
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !(window as any).MSStream;
-
-    if (deferredPrompt) {
-      deferredPrompt.prompt();
-      try {
-        const { outcome } = await deferredPrompt.userChoice;
-        console.log(`Usuario eligió instalar PWA: ${outcome}`);
-      } catch (err) {
-        console.error('Error durante la instalación', err);
-      }
-      setDeferredPrompt(null);
-      setShowInstallBtn(false);
-    } else if (isIOS) {
-      // Show gorgeous interactive helper overlay for iOS
-      setShowIOSHint(true);
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+    try {
+      const { outcome } = await deferredPrompt.userChoice;
+      console.log(`Usuario eligió instalar PWA: ${outcome}`);
+    } catch (err) {
+      console.error('Error durante la instalación', err);
     }
+    setDeferredPrompt(null);
+    setShowInstallBtn(false);
   };
 
   // Generate 5 random minigames for a world
@@ -549,140 +525,6 @@ function AppContent() {
             }
           }} 
         />
-
-
-
-        {/* Seamless iOS Safari Custom Installer Overlay */}
-        <AnimatePresence>
-          {showIOSHint && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/85 backdrop-blur-md flex items-center justify-center p-4 z-50 pointer-events-auto"
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.95, y: 15 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.95, y: 15 }}
-                className="bg-[#17122B] border border-white/20 p-6 rounded-3xl w-full max-w-[340px] text-center shadow-[0_15px_50px_rgba(0,0,0,0.8)] relative"
-              >
-                <div className="absolute top-4 right-4">
-                  <button
-                    onClick={() => setShowIOSHint(false)}
-                    className="text-white/40 hover:text-white bg-white/5 hover:bg-white/10 p-1.5 rounded-full transition-colors cursor-pointer"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-
-                <div className="flex flex-col items-center gap-4">
-                  <div className="p-3 bg-[#00E5FF]/10 rounded-full border border-[#00E5FF]/20 text-[#00E5FF] mt-2">
-                    <Apple size={32} className="animate-pulse" />
-                  </div>
-                  
-                  <h3 className="text-white font-black text-xl tracking-tight uppercase">Instalar MindRocket</h3>
-                  <p className="text-xs text-white/70 leading-relaxed font-sans px-2">
-                    Instala MindRocket en tu pantalla de inicio siguiendo estos dos toques directos:
-                  </p>
-
-                  <div className="w-full bg-white/5 border border-white/10 rounded-2xl p-4 space-y-3.5 text-left mt-1">
-                    <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-[#FF477E]/15 border border-[#FF477E]/30 rounded-xl text-[#FF477E]">
-                        <Share2 size={16} />
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-bold text-white uppercase">1. Toca "Compartir"</p>
-                        <p className="text-[10px] text-white/50">Pulsa el botón de compartir del Safari de abajo</p>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-[#00F5D4]/15 border border-[#00F5D4]/30 rounded-xl text-[#00F5D4] font-black text-[12px] w-[28px] h-[28px] flex items-center justify-center">
-                        ＋
-                      </div>
-                      <div>
-                        <p className="text-[11px] font-bold text-white uppercase">2. Elige "Agregar a inicio"</p>
-                        <p className="text-[10px] text-white/50">¡Y listo! Ya aparecerá como app</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <button
-                    onClick={() => setShowIOSHint(false)}
-                    className="w-full mt-2 py-3 bg-[#00F5D4] text-black font-black uppercase text-xs rounded-full transition-all cursor-pointer shadow-[0_4px_12px_rgba(0,245,212,0.4)] hover:bg-[#00E5FF]"
-                  >
-                    ¡Entendido, Listo!
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Custom dialog modal based exactly on user screenshot */}
-        <AnimatePresence>
-          {showInstallCustomDialog && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/75 backdrop-blur-[1.5px] flex items-center justify-center p-4 z-50 pointer-events-auto"
-            >
-              <motion.div
-                initial={{ opacity: 0, scale: 0.93, y: 12 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                exit={{ opacity: 0, scale: 0.93, y: 12 }}
-                transition={{ duration: 0.23, ease: "easeOut" }}
-                className="bg-[#1b1921] border border-white/[0.08] p-[24px] sm:p-[28px] rounded-[1.75rem] w-full max-w-[440px] shadow-[0_15px_40px_rgba(0,0,0,0.7)] flex flex-col gap-6 text-left"
-              >
-                <div>
-                  <h3 className="text-white font-sans font-semibold text-lg sm:text-xl tracking-tight leading-none">
-                    Instalar la app
-                  </h3>
-                </div>
-
-                <div className="flex items-center gap-[18px]">
-                  {/* Square-rounded app icon as seen in screenshot */}
-                  <div className="w-[52px] h-[52px] bg-[#221e35] rounded-xl flex items-center justify-center border border-white/[0.08] shadow-md shrink-0 overflow-hidden">
-                    <img
-                      src="/mindrocket_mascot.png"
-                      alt="MindRocket Logo"
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
-                  </div>
-                  <div className="flex flex-col gap-1 overflow-hidden">
-                    <h4 className="text-white font-sans font-semibold text-sm leading-tight tracking-tight truncate">
-                      MindRocket - ¡Aprende diseño jugando!
-                    </h4>
-                    <p className="text-[#8e8ca2] font-mono text-[11px] leading-none tracking-normal">
-                      mindrocket.vercel.app
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-end gap-3.5 mt-2">
-                  <button
-                    onClick={async () => {
-                      setShowInstallCustomDialog(false);
-                      await installApp();
-                    }}
-                    className="px-[24px] py-[10px] border border-[#48456c] hover:bg-[#48456c]/20 text-[#a5b4fc] rounded-full font-sans font-semibold text-xs sm:text-sm tracking-wide transition-all active:scale-95 cursor-pointer shadow-md select-none"
-                  >
-                    Instalar
-                  </button>
-                  <button
-                    onClick={() => setShowInstallCustomDialog(false)}
-                    className="px-[24px] py-[10px] border border-[#4c4a75]/40 hover:bg-white/5 text-[#8e8ca2] rounded-full font-sans font-semibold text-xs sm:text-sm tracking-wide transition-all active:scale-95 cursor-pointer select-none"
-                  >
-                    Cancelar
-                  </button>
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
     </div>
   );

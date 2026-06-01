@@ -12,15 +12,6 @@
     <link rel="apple-touch-icon" href="/icon-192.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <script>
-      // Capturar beforeinstallprompt ANTES de que React cargue
-      window.__installPrompt = null;
-      window.addEventListener('beforeinstallprompt', function(e) {
-        e.preventDefault();
-        window.__installPrompt = e;
-        window.dispatchEvent(new CustomEvent('installpromptready'));
-      });
-    </script>
   </head>
   <body>
     <div id="root"></div>
@@ -35,3 +26,4 @@
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
+
